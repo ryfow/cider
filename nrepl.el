@@ -1439,12 +1439,16 @@ the buffer should appear."
       (nrepl-symbol-at-point))))
 
 (defun nrepl-read-symbol-name (prompt callback &optional query)
-   "Either read a symbol name or choose the one at point.
+   "Either read a symbol name, choose the one at point or choose
+the operator before the point.
 The user is prompted if a prefix argument is in effect, if there is no
 symbol at point, or if QUERY is non-nil."
-   (let ((symbol-name (nrepl-symbol-at-point)))
+   (let ((symbol-name (nrepl-symbol-at-point))
+         (operator (nrepl-operator-before-point)))
      (cond ((not (or current-prefix-arg query (not symbol-name)))
             (funcall callback symbol-name))
+           ((not (or current-prefix-arg query (not operator)))
+            (funcall callback operator))
            (ido-mode (nrepl-ido-read-var nrepl-buffer-ns callback))
            (t (funcall callback (read-from-minibuffer prompt symbol-name))))))
 
