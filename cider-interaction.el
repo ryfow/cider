@@ -438,6 +438,28 @@ is ambiguity, therefore nil is returned."
       (when (= 1 (length matching-connections))
         (car matching-connections)))))
 
+(defun cider-set-relevant-connection (&optional arg)
+  "Try to set the current REPL buffer based on the the current Clojure source buffer.
+If succesful, return the new connection buffer."
+  (interactive "p")
+  (cider-ensure-connected)
+  (let* ((project-directory
+          (or (when (eq 16 arg) (read-directory-name "Project: "))
+              (nrepl-project-directory-for (nrepl-current-dir))))
+         (connection-buffer
+          (or
+           (and (= 1 (length nrepl-connection-list)) (car nrepl-connection-list))
+           (and project-directory
+                (cider-find-connection-buffer-for-project-directory project-directory))))
+         (previous-connection-list nrepl-connection-list))
+    (when (and connection-buffer
+               (not (string= connection-buffer
+                             (car nrepl-connection-list))))
+      (setq nrepl-connection-list
+            (cons connection-buffer (delq connection-buffer nrepl-connection-list)))
+      (message (cider--connection-info (car nrepl-connection-list))))
+    connection-buffer))
+
 (defun cider-switch-to-relevant-repl-buffer (&optional arg)
   "Select the REPL buffer, when possible in an existing window.
 The buffer chosen is based on the file open in the current buffer.
@@ -456,19 +478,9 @@ of the namespace in the Clojure source buffer.
 With a second prefix ARG the chosen REPL buffer is based on a
 supplied project directory."
   (interactive "p")
-  (cider-ensure-connected)
-  (let* ((project-directory
-          (or (when (eq 16 arg) (read-directory-name "Project: "))
-              (nrepl-project-directory-for (nrepl-current-dir))))
-         (connection-buffer
-          (or
-           (and (= 1 (length nrepl-connection-list)) (car nrepl-connection-list))
-           (and project-directory
-                (cider-find-connection-buffer-for-project-directory project-directory)))))
-    (when connection-buffer
-      (setq nrepl-connection-list
-            (cons connection-buffer (delq connection-buffer nrepl-connection-list))))
-    (cider-switch-to-current-repl-buffer arg)
+  (cider-set-relevant-connection)
+  (cider-switch-to-current-repl-buffer arg)
+  (let ((connection-buffer (cider-set-relevant-connection arg)))
     (message
      (format (if connection-buffer
                  "Switched to REPL: %s"
